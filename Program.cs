@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace MarkdownWikiGenerator
 {
@@ -14,7 +10,7 @@ namespace MarkdownWikiGenerator
         static void Main(string[] args)
         {
             // put dll & xml on same diretory.
-            var target = "UniRx.dll"; // :)
+            var target = string.Empty;
             string dest = "md";
             string namespaceMatch = string.Empty;
             if (args.Length == 1)
@@ -35,32 +31,35 @@ namespace MarkdownWikiGenerator
 
             var types = MarkdownGenerator.Load(target, namespaceMatch);
 
-            // Home Markdown Builder
             var homeBuilder = new MarkdownBuilder();
-            homeBuilder.Header(1, "References");
+            homeBuilder.Header(1, "API Reference");
             homeBuilder.AppendLine();
 
-            foreach (var g in types.GroupBy(x => x.Namespace).OrderBy(x => x.Key))
+            foreach (var group in types.GroupBy(x => x.Namespace).OrderBy(x => x.Key))
             {
                 if (!Directory.Exists(dest)) Directory.CreateDirectory(dest);
 
-                homeBuilder.HeaderWithLink(2, g.Key, g.Key);
+                var fileName = group.Key.ToLowerInvariant().Replace(".", "-") + ".md";
+
+                homeBuilder.HeaderWithLink(2, group.Key, fileName);
                 homeBuilder.AppendLine();
 
                 var sb = new StringBuilder();
-                foreach (var item in g.OrderBy(x => x.Name))
-                {
-                    homeBuilder.ListLink(MarkdownBuilder.MarkdownCodeQuote(item.BeautifyName), g.Key + "#" + item.BeautifyName.Replace("<", "").Replace(">", "").Replace(",", "").Replace(" ", "-").ToLower());
+                sb.Append("---\nsidebar: auto\n---\n\n");
+                sb.Append($"# {group.Key}\n\n");
 
+                foreach (var item in group.OrderBy(x => x.Name))
+                {
+                    //homeBuilder.ListLink(MarkdownBuilder.MarkdownCodeQuote(item.BeautifyName), fileName + "#" + item.BeautifyName.Replace("<", "").Replace(">", "").Replace(",", "").Replace(" ", "-").ToLower());
                     sb.Append(item.ToString());
                 }
 
-                File.WriteAllText(Path.Combine(dest, g.Key + ".md"), sb.ToString());
+                File.WriteAllText(Path.Combine(dest, fileName), sb.ToString());
                 homeBuilder.AppendLine();
             }
 
-            // Gen Home
-            File.WriteAllText(Path.Combine(dest, "Home.md"), homeBuilder.ToString());
+            // Generate index.
+            File.WriteAllText(Path.Combine(dest, "index.md"), homeBuilder.ToString());
         }
     }
 }

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace MarkdownWikiGenerator
@@ -25,6 +23,7 @@ namespace MarkdownWikiGenerator
         public string MemberName { get; set; }
         public string Summary { get; set; }
         public string Remarks { get; set; }
+        public string Example { get; set; }
         public Dictionary<string, string> Parameters { get; set; }
         public string Returns { get; set; }
 
@@ -40,7 +39,6 @@ namespace MarkdownWikiGenerator
             return ParseXmlComment(xDocument, null);
         }
 
-        // cheap, quick hack parser:)
         internal static XmlDocumentComment[] ParseXmlComment(XDocument xDocument, string namespaceMatch) {
             return xDocument.Descendants("member")
                 .Select(x => {
@@ -50,23 +48,28 @@ namespace MarkdownWikiGenerator
                     var memberType = (MemberType)match.Groups[1].Value[0];
                     if (memberType == MemberType.None) return null;
 
+                    // Summary body.
                     var summaryXml = x.Elements("summary").FirstOrDefault()?.ToString()
                         ?? x.Element("summary")?.ToString()
                         ?? "";
                     summaryXml = Regex.Replace(summaryXml, @"<\/?summary>", string.Empty);
                     summaryXml = Regex.Replace(summaryXml, @"<para\s*/>", Environment.NewLine);
                     summaryXml = Regex.Replace(summaryXml, @"<see cref=""\w:([^\""]*)""\s*\/>", m => ResolveSeeElement(m, namespaceMatch));
+                    var summary = Regex.Replace(summaryXml, @"<(type)*paramref name=""([^\""]*)""\s*\/>", e => $"`{e.Groups[1].Value}`");
+                    if (summary != "") summary = string.Join("  ", summary.Split(new[] { "\r", "\n", "\t" }, StringSplitOptions.RemoveEmptyEntries).Select(y => y.Trim()));
 
-                    var parsed = Regex.Replace(summaryXml, @"<(type)*paramref name=""([^\""]*)""\s*\/>", e => $"`{e.Groups[1].Value}`");
-
-                    var summary = parsed;
-
-                    if (summary != "") {
-                        summary = string.Join("  ", summary.Split(new[] { "\r", "\n", "\t" }, StringSplitOptions.RemoveEmptyEntries).Select(y => y.Trim()));
-                    }
+                    // Remarks body.
+                    var remarksXml = x.Elements("remarks").FirstOrDefault()?.ToString()
+                        ?? x.Element("remarks")?.ToString()
+                        ?? "";
+                    remarksXml = Regex.Replace(remarksXml, @"<\/?remarks>", string.Empty);
+                    remarksXml = Regex.Replace(remarksXml, @"<para\s*/>", Environment.NewLine);
+                    remarksXml = Regex.Replace(remarksXml, @"<see cref=""\w:([^\""]*)""\s*\/>", m => ResolveSeeElement(m, namespaceMatch));
+                    var remarks = Regex.Replace(remarksXml, @"<(type)*paramref name=""([^\""]*)""\s*\/>", e => $"`{e.Groups[1].Value}`");
+                    if (remarks != "") remarks = string.Join("  ", remarks.Split(new[] { "\r", "\n", "\t" }, StringSplitOptions.RemoveEmptyEntries).Select(y => y.Trim()));
 
                     var returns = ((string)x.Element("returns")) ?? "";
-                    var remarks = ((string)x.Element("remarks")) ?? "";
+                    var example = ((string)x.Element("example")) ?? "";
                     var parameters = x.Elements("param")
                         .Select(e => Tuple.Create(e.Attribute("name").Value, e))
                         .Distinct(new Item1EqualityCompaerer<string, XElement>())
@@ -82,6 +85,7 @@ namespace MarkdownWikiGenerator
                         MemberName = match.Groups[3].Value,
                         Summary = summary.Trim(),
                         Remarks = remarks.Trim(),
+                        Example = example.Trim(),
                         Parameters = parameters,
                         Returns = returns.Trim()
                     };

@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace MarkdownWikiGenerator
 {
@@ -30,7 +27,7 @@ namespace MarkdownWikiGenerator
                 return "`" + BeautifyType(x.ParameterType) + "` " + x.Name + suffix;
             });
 
-            return methodInfo.Name + "(" + (isExtension ? "this " : "") + string.Join(", ", seq) + ")";
+            return methodInfo.Name.Replace("<", "&lt;").Replace(">", "&gt;") + "(" + (isExtension ? "this " : "") + string.Join(", ", seq) + ")";
         }
     }
 }

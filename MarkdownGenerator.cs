@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace MarkdownWikiGenerator
@@ -19,25 +18,24 @@ namespace MarkdownWikiGenerator
         public string Name => type.Name;
         public string BeautifyName => Beautifier.BeautifyType(type);
 
-        public MarkdownableType(Type type, ILookup<string, XmlDocumentComment> commentLookup)
+        public MarkdownableType (Type type, ILookup<string, XmlDocumentComment> commentLookup)
         {
             this.type = type;
             this.commentLookup = commentLookup;
         }
 
-        MethodInfo[] GetMethods()
+        MethodInfo[] GetMethods ()
         {
             return type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.InvokeMethod)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any() && !x.IsPrivate)
                 .ToArray();
         }
 
-        PropertyInfo[] GetProperties()
+        PropertyInfo[] GetProperties ()
         {
             return type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.GetProperty | BindingFlags.SetProperty)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any())
-                .Where(y =>
-                {
+                .Where(y => {
                     var get = y.GetGetMethod(true);
                     var set = y.GetSetMethod(true);
                     if (get != null && set != null)
@@ -60,33 +58,32 @@ namespace MarkdownWikiGenerator
                 .ToArray();
         }
 
-        FieldInfo[] GetFields()
+        FieldInfo[] GetFields ()
         {
             return type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.GetField | BindingFlags.SetField)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any() && !x.IsPrivate)
                 .ToArray();
         }
 
-        EventInfo[] GetEvents()
+        EventInfo[] GetEvents ()
         {
             return type.GetEvents(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any())
                 .ToArray();
         }
 
-        FieldInfo[] GetStaticFields()
+        FieldInfo[] GetStaticFields ()
         {
             return type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.GetField | BindingFlags.SetField)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any() && !x.IsPrivate)
                 .ToArray();
         }
 
-        PropertyInfo[] GetStaticProperties()
+        PropertyInfo[] GetStaticProperties ()
         {
             return type.GetProperties(BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.GetProperty | BindingFlags.SetProperty)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any())
-                .Where(y =>
-                {
+                .Where(y => {
                     var get = y.GetGetMethod(true);
                     var set = y.GetSetMethod(true);
                     if (get != null && set != null)
@@ -109,24 +106,25 @@ namespace MarkdownWikiGenerator
                 .ToArray();
         }
 
-        MethodInfo[] GetStaticMethods()
+        MethodInfo[] GetStaticMethods ()
         {
             return type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.InvokeMethod)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any() && !x.IsPrivate)
                 .ToArray();
         }
 
-        EventInfo[] GetStaticEvents()
+        EventInfo[] GetStaticEvents ()
         {
             return type.GetEvents(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any())
                 .ToArray();
         }
-        void BuildTable<T>(MarkdownBuilder mb, string label, T[] array, IEnumerable<XmlDocumentComment> docs, Func<T, string> type, Func<T, string> name, Func<T, string> finalName)
+
+        void BuildTable<T> (MarkdownBuilder mb, string label, T[] array, IEnumerable<XmlDocumentComment> docs, Func<T, string> type, Func<T, string> name, Func<T, string> finalName)
         {
             if (array.Any())
             {
-                mb.AppendLine(label);
+                mb.Header(4, label);
                 mb.AppendLine();
 
                 string[] head = (this.type.IsEnum)
@@ -139,8 +137,7 @@ namespace MarkdownWikiGenerator
                     seq = array.OrderBy(x => name(x));
                 }
 
-                var data = seq.Select(item2 =>
-                {
+                var data = seq.Select(item2 => {
                     var summary = docs.FirstOrDefault(x => x.MemberName == name(item2) || x.MemberName.StartsWith(name(item2) + "`"))?.Summary ?? "";
                     return new[] { MarkdownBuilder.MarkdownCodeQuote(type(item2)), finalName(item2), summary };
                 });
@@ -150,40 +147,84 @@ namespace MarkdownWikiGenerator
             }
         }
 
-        public override string ToString()
+        public override string ToString () => type.FullName.StartsWith("Naninovel.Actions") ? ActionToString() : GeneralToString();
+
+        private string ActionToString ()
         {
             var mb = new MarkdownBuilder();
 
-            mb.HeaderWithCode(2, Beautifier.BeautifyType(type, false));
+            if (type.CustomAttributes.Any(a => a.AttributeType.Name == "NovelActionTagAttribute"))
+            {
+                var tagAttr = type.CustomAttributes.First(a => a.AttributeType.Name == "NovelActionTagAttribute");
+                var tag = tagAttr.ConstructorArguments.First().Value as string;
+                mb.Header(2, tag);
+            }
+            else mb.Header(2, Beautifier.BeautifyType(type, false));
             mb.AppendLine();
 
-            var desc = commentLookup[type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Summary ?? "";
-            if (desc != "") {
-                mb.AppendLine(desc);
-            }
+            var summary = commentLookup[type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Summary;
+            if (!string.IsNullOrWhiteSpace(summary))
             {
-                var sb = new StringBuilder();
+                mb.AppendLine(summary);
+                mb.AppendLine();
+            }
 
+            var remarks = commentLookup[type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Remarks;
+            if (!string.IsNullOrWhiteSpace(remarks))
+            {
+                mb.AppendLine(remarks);
+                mb.AppendLine();
+            }
+
+            var example = commentLookup[type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Example;
+            if (!string.IsNullOrWhiteSpace(example))
+            {
+                mb.Code(example);
+                mb.AppendLine();
+            }
+
+            return mb.ToString();
+        }
+
+        private string GeneralToString ()
+        {
+            var mb = new MarkdownBuilder();
+
+            mb.Header(2, Beautifier.BeautifyType(type, false));
+            mb.AppendLine();
+
+            var summary = commentLookup[type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Summary;
+            if (!string.IsNullOrWhiteSpace(summary))
+            {
+                mb.Header(4, "Summary");
+                mb.AppendLine(summary);
+            }
+
+            var remarks = commentLookup[type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Remarks;
+            if (!string.IsNullOrWhiteSpace(remarks))
+            {
+                mb.Header(4, "Remarks");
+                mb.AppendLine(remarks);
+            }
+
+            { // Signature code.
                 var stat = (type.IsAbstract && type.IsSealed) ? "static " : "";
                 var abst = (type.IsAbstract && !type.IsInterface && !type.IsSealed) ? "abstract " : "";
                 var classOrStructOrEnumOrInterface = type.IsInterface ? "interface" : type.IsEnum ? "enum" : type.IsValueType ? "struct" : "class";
 
+                var sb = new StringBuilder();
                 sb.AppendLine($"public {stat}{abst}{classOrStructOrEnumOrInterface} {Beautifier.BeautifyType(type, true)}");
                 var impl = string.Join(", ", new[] { type.BaseType }.Concat(type.GetInterfaces()).Where(x => x != null && x != typeof(object) && x != typeof(ValueType)).Select(x => Beautifier.BeautifyType(x)));
-                if (impl != "")
-                {
-                    sb.AppendLine("    : " + impl);
-                }
+                if (impl != "") sb.AppendLine("    : " + impl);
 
                 mb.Code("csharp", sb.ToString());
+                mb.AppendLine();
             }
-
-            mb.AppendLine();
 
             if (type.IsEnum)
             {
                 var enums = Enum.GetNames(type)
-                    .Select(x => new { Name = x, Value = ((Int32)Enum.Parse(type, x)) })
+                    .Select(x => new { Name = x, Value = (int)Enum.Parse(type, x) })
                     .OrderBy(x => x.Value)
                     .ToArray();
 
@@ -219,8 +260,7 @@ namespace MarkdownWikiGenerator
             }
             var commentsLookup = comments.ToLookup(x => x.ClassName);
 
-            var namespaceRegex = 
-                !string.IsNullOrEmpty(namespaceMatch) ? new Regex(namespaceMatch) : null;
+            var namespaceRegex = !string.IsNullOrEmpty(namespaceMatch) ? new Regex(namespaceMatch) : null;
 
             var markdownableTypes = new[] { Assembly.LoadFrom(dllPath) }
                 .SelectMany(x =>

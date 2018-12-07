@@ -76,10 +76,17 @@ namespace MarkdownWikiGenerator
             Link(altText, imageUrl);
         }
 
-        public void Code(string language, string code)
+        public void Code (string language, string code)
         {
             sb.Append("```");
             sb.AppendLine(language);
+            sb.AppendLine(code);
+            sb.AppendLine("```");
+        }
+
+        public void Code (string code)
+        {
+            sb.Append("```");
             sb.AppendLine(code);
             sb.AppendLine("```");
         }
