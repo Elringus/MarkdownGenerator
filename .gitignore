@@ -1,5 +1,7 @@
 # Unity
 
+.vs
+
 *.pidb
 *.suo
 *.userprefs
