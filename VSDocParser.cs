@@ -70,6 +70,8 @@ namespace MarkdownWikiGenerator
 
                     var returns = ((string)x.Element("returns")) ?? "";
                     var example = ((string)x.Element("example")) ?? "";
+                    if (example != "") example = string.Join(Environment.NewLine, // Trim each line of the example code.
+                        example.Split(new[] { "\r", "\n", "\t" }, StringSplitOptions.None).Select(l => l.Trim()));
                     var parameters = x.Elements("param")
                         .Select(e => Tuple.Create(e.Attribute("name").Value, e))
                         .Distinct(new Item1EqualityCompaerer<string, XElement>())
