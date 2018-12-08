@@ -35,11 +35,13 @@ namespace MarkdownWikiGenerator
             {
                 if (!Directory.Exists(dest)) Directory.CreateDirectory(dest);
 
-                var fileName = group.Key.ToLowerInvariant().Replace(".", "-") + ".md";
+                //var fileName = group.Key.ToLowerInvariant().Replace(".", "-") + ".md";
+                var fileName = "index.md";
 
                 var sb = new StringBuilder();
                 sb.Append("---\nsidebar: auto\n---\n\n");
-                sb.Append($"# {group.Key}\n\n");
+                sb.Append("# API Reference\n\n");
+                sb.Append("Novel script actions API reference. Use the side bar to quickly navigate between available actions. Check out the [novel scripts guide](/guide/novel-scripts.md) in case you have no idea what's this all about.\n\n");
 
                 foreach (var type in group.OrderBy(x => x.HasActionTag ? x.ActionTag : x.Name))
                 {
