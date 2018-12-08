@@ -172,19 +172,28 @@ namespace MarkdownWikiGenerator
                 var attr = parameter.CustomAttributes.First(a => a.AttributeType.Name == actionParamAttrName);
                 var paramTag = attr.ConstructorArguments[0].Value as string;
                 var name = paramTag ?? parameter.Name;
-                if (name == string.Empty) name = $"<span class=\"action-param-nameless\" title=\"Nameless parameter: value should be provided after the action identifer without specifying parameter name\">{parameter.Name}</span>";
-                else
+                var isNameless = name == string.Empty;
+                var isOptional = (bool)attr.ConstructorArguments[1].Value;
+                if (isNameless) name = parameter.Name;
+                else name = char.ToLowerInvariant(name[0]) + (name.Length > 1 ? name.Substring(1) : string.Empty);
+                if (isNameless || !isOptional)
                 {
-                    name = char.ToLowerInvariant(name[0]) + (name.Length > 1 ? name.Substring(1) : string.Empty);
-                    if (!(bool)attr.ConstructorArguments[1].Value) name = $"<span class=\"action-param-required\" title=\"Required parameter: parameter should always be specified\">{name}</span>";
+                    var style = (isNameless ? "action-param-nameless " : string.Empty) + (!isOptional ? "action-param-required" : string.Empty);
+                    style = style.Trim();
+                    var title = (isNameless ? "Nameless parameter: value should be provided after the action identifer without specifying parameter name " : string.Empty) + 
+                        (!isOptional ? " Required parameter: parameter should always be specified" : string.Empty);
+                    title = title.Trim();
+                    name = $"<span class=\"{style}\" title=\"{title}\">{name}</span>";
                 }
+                
                 var typeName = Beautifier.BeautifyType(parameter.FieldType);
 
                 var doc = default(XmlDocumentComment);
                 var baseType = Type;
                 while (baseType != null && doc is null)
                 {
-                    doc = commentLookup[baseType.FullName].FirstOrDefault(x => x.MemberName == parameter.Name || x.MemberName.StartsWith(parameter.Name + "`"));
+                    var key = baseType.FullName != null && baseType.FullName.Contains("[") ? baseType.FullName.GetBefore("[") : baseType.FullName;
+                    doc = commentLookup[key].FirstOrDefault(x => x.MemberName == parameter.Name || x.MemberName.StartsWith(parameter.Name + "`"));
                     baseType = baseType.BaseType;
                 }
                 var descr = doc?.Summary ?? string.Empty;
@@ -294,7 +303,6 @@ namespace MarkdownWikiGenerator
                 .Where(x => x.IsPublic && !typeof(Delegate).IsAssignableFrom(x) && !x.GetCustomAttributes<ObsoleteAttribute>().Any())
                 .Where(x => IsRequiredNamespace(x, namespaceRegex))
                 .Select(x => new MarkdownableType(x, commentsLookup))
-                .Where(x => !(x.IsAction && x.Type.IsAbstract))
                 .ToArray();
 
             return markdownableTypes;

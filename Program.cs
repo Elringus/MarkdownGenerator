@@ -9,6 +9,8 @@ namespace MarkdownWikiGenerator
         // 0 = dll src path, 1 = dest root, 2 = namespace regex filter
         private static void Main(string[] args)
         {
+            //args = new [] { @"C:\Users\Elringus\AppData\Local\Temp\NaninovelDocsGenerator\Assembly-CSharp.dll", @"C:\Users\Elringus\Documents\WebProjects\NaninovelWeb\docs\api", @"^Naninovel" };
+
             var target = string.Empty;
             var dest = "md";
             var namespaceMatch = string.Empty;
@@ -39,8 +41,11 @@ namespace MarkdownWikiGenerator
                 sb.Append("---\nsidebar: auto\n---\n\n");
                 sb.Append($"# {group.Key}\n\n");
 
-                foreach (var item in group.OrderBy(x => x.HasActionTag ? x.ActionTag : x.Name))
-                    sb.Append(item.ToString());
+                foreach (var type in group.OrderBy(x => x.HasActionTag ? x.ActionTag : x.Name))
+                {
+                    if (type.IsAction && type.Type.IsAbstract) continue;
+                    sb.Append(type.ToString());
+                }
 
                 File.WriteAllText(Path.Combine(dest, fileName), sb.ToString());
             }

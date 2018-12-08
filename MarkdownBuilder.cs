@@ -86,7 +86,7 @@ namespace MarkdownWikiGenerator
 
         public void Code (string code)
         {
-            sb.Append("```");
+            sb.AppendLine("```");
             sb.AppendLine(code);
             sb.AppendLine("```");
         }
