@@ -163,7 +163,7 @@ namespace MarkdownWikiGenerator
 
             // Params ----------------------------------------
             mb.Header(4, "Parameters");
-            mb.Append("<div class=\"config-table\">\n\n");
+            mb.Append("\n<div class=\"config-table\">\n\n");
             mb.Append("Name | Type | Description\n");
             mb.Append("--- | --- | ---\n");
             var parameters = GetParameters();
