@@ -55,6 +55,7 @@ namespace MarkdownWikiGenerator
                     summaryXml = Regex.Replace(summaryXml, @"<\/?summary>", string.Empty);
                     summaryXml = Regex.Replace(summaryXml, @"<para\s*/>", Environment.NewLine);
                     summaryXml = Regex.Replace(summaryXml, @"<see cref=""\w:([^\""]*)""\s*\/>", m => ResolveSeeElement(m, namespaceMatch));
+                    summaryXml = Regex.Replace(summaryXml, @"<see href=""(.*?)""\s*\/>", ResolveSeeHrefElement);
                     var summary = Regex.Replace(summaryXml, @"<(type)*paramref name=""([^\""]*)""\s*\/>", e => $"`{e.Groups[1].Value}`");
                     if (summary != "") summary = string.Join("  ", summary.Split(new[] { "\r", "\n", "\t" }, StringSplitOptions.RemoveEmptyEntries).Select(y => y.Trim()));
 
@@ -65,6 +66,7 @@ namespace MarkdownWikiGenerator
                     remarksXml = Regex.Replace(remarksXml, @"<\/?remarks>", string.Empty);
                     remarksXml = Regex.Replace(remarksXml, @"<para\s*/>", Environment.NewLine);
                     remarksXml = Regex.Replace(remarksXml, @"<see cref=""\w:([^\""]*)""\s*\/>", m => ResolveSeeElement(m, namespaceMatch));
+                    remarksXml = Regex.Replace(remarksXml, @"<see href=""(.*?)""/>", ResolveSeeHrefElement);
                     var remarks = Regex.Replace(remarksXml, @"<(type)*paramref name=""([^\""]*)""\s*\/>", e => $"`{e.Groups[1].Value}`");
                     if (remarks != "") remarks = string.Join("  ", remarks.Split(new[] { "\r", "\n", "\t" }, StringSplitOptions.RemoveEmptyEntries).Select(y => y.Trim()));
 
@@ -104,6 +106,13 @@ namespace MarkdownWikiGenerator
                 }
             }
             return $"`{typeName}`";
+        }
+
+        private static string ResolveSeeHrefElement (Match m)
+        {
+            var href = m.Groups[1].Value;
+            var name = href.GetAfterFirst("naninovel.com");
+            return $"[{name}]({href})";
         }
 
         class Item1EqualityCompaerer<T1, T2> : EqualityComparer<Tuple<T1, T2>>
