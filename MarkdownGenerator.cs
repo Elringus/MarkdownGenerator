@@ -279,7 +279,11 @@ namespace MarkdownWikiGenerator
             var xmlPath = Path.Combine(Directory.GetParent(dllPath).FullName, Path.GetFileNameWithoutExtension(dllPath) + ".xml");
 
             var comments = new XmlDocumentComment[0];
-            if (File.Exists(xmlPath)) comments = VSDocParser.ParseXmlComment(XDocument.Parse(File.ReadAllText(xmlPath)), namespaceMatch);
+            if (File.Exists(xmlPath))
+            {
+                var fileText = File.ReadAllText(xmlPath, Encoding.UTF8);
+                comments = VSDocParser.ParseXmlComment(XDocument.Parse(fileText), namespaceMatch);
+            }
             var commentsLookup = comments.ToLookup(x => x.ClassName);
 
             var namespaceRegex = !string.IsNullOrEmpty(namespaceMatch) ? new Regex(namespaceMatch) : null;

@@ -29,7 +29,7 @@ namespace MarkdownWikiGenerator
             }
 
             if (!Directory.Exists(dest)) Directory.CreateDirectory(dest);
-            File.WriteAllText(Path.Combine(dest, "index.md"), sb.ToString());
+            File.WriteAllText(Path.Combine(dest, "index.md"), sb.ToString().Replace("*vertical-bar*", "&#124;"), Encoding.UTF8);
         }
     }
 }
