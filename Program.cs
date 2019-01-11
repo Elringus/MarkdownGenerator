@@ -16,25 +16,20 @@ namespace MarkdownWikiGenerator
             var namespaceMatch = args[2];
             var introText = args[3];
 
-            var types = MarkdownGenerator.Load(target, namespaceMatch);
-            foreach (var group in types.GroupBy(x => x.Namespace).OrderBy(x => x.Key))
+            var sb = new StringBuilder();
+            sb.Append(introText);
+
+            var types = MarkdownGenerator.Load(target, namespaceMatch)
+                .OrderBy(x => x.HasActionTag ? x.ActionTag : x.Name);
+
+            foreach (var type in types)
             {
-                if (!Directory.Exists(dest)) Directory.CreateDirectory(dest);
-
-                //var fileName = group.Key.ToLowerInvariant().Replace(".", "-") + ".md";
-                var fileName = "index.md";
-
-                var sb = new StringBuilder();
-                sb.Append(introText);
-
-                foreach (var type in group.OrderBy(x => x.HasActionTag ? x.ActionTag : x.Name))
-                {
-                    if (type.IsAction && type.Type.IsAbstract) continue;
-                    sb.Append(type.ToString());
-                }
-
-                File.WriteAllText(Path.Combine(dest, fileName), sb.ToString());
+                if (type.IsAction && type.Type.IsAbstract) continue;
+                sb.Append(type.ToString());
             }
+
+            if (!Directory.Exists(dest)) Directory.CreateDirectory(dest);
+            File.WriteAllText(Path.Combine(dest, "index.md"), sb.ToString());
         }
     }
 }
