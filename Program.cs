@@ -9,7 +9,7 @@ namespace MarkdownWikiGenerator
         // 0 = dll src path, 1 = dest root, 2 = namespace regex filter, 3 = intro text
         private static void Main(string[] args)
         {
-            //args = new [] { @"C:\Users\Elringus\AppData\Local\Temp\NaninovelDocsGenerator\Assembly-CSharp.dll", @"C:\Users\Elringus\Documents\WebProjects\NaninovelWeb\docs\api", @"^Naninovel", "..." };
+            //args = new [] { @"C:\Users\Elringus\Documents\UnityProjects\Naninovel\DocsGenerator\Assembly-CSharp.dll", @"C:\Users\Elringus\Documents\WebProjects\NaninovelWeb\docs\api", @"^Naninovel.Actions", "..." };
 
             var target = args[0];
             var dest = args[1];
