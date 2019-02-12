@@ -65,9 +65,9 @@ namespace MarkdownWikiGenerator
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any() && !x.IsPrivate).ToArray();
         }
 
-        private FieldInfo[] GetParameters ()
+        private PropertyInfo[] GetParameters ()
         {
-            return Type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetField | BindingFlags.SetField)
+            return Type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty | BindingFlags.SetProperty)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any())
                 .Where(f => f.CustomAttributes.Any(a => a.AttributeType.Name == actionParamAttrName)).ToArray();
         }
@@ -186,7 +186,7 @@ namespace MarkdownWikiGenerator
                     name = $"<span class=\"{style}\" title=\"{title}\">{name}</span>";
                 }
                 
-                var typeName = Beautifier.BeautifyType(parameter.FieldType);
+                var typeName = Beautifier.BeautifyType(parameter.PropertyType);
 
                 var doc = default(XmlDocumentComment);
                 var baseType = Type;
