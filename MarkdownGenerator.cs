@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -22,6 +23,7 @@ namespace MarkdownWikiGenerator
         private readonly ILookup<string, XmlDocumentComment> commentLookup;
         private const string actionTagAttrName = "NovelActionTagAttribute";
         private const string actionParamAttrName = "NovelActionParameterAttribute";
+        private const string localizableInterfaceName = "ILocalizable";
 
         public MarkdownableType (Type type, ILookup<string, XmlDocumentComment> commentLookup)
         {
@@ -30,6 +32,111 @@ namespace MarkdownWikiGenerator
         }
 
         public override string ToString () => IsAction ? ActionToString() : GeneralToString();
+        
+        public JToken ToJson ()
+        {
+            dynamic actionJson = new JObject();
+
+            actionJson.id = Type.Name;
+
+            if (Type.CustomAttributes.Any(a => a.AttributeType.Name == actionTagAttrName))
+                actionJson.alias = Type.CustomAttributes.First(a => a.AttributeType.Name == actionTagAttrName).ConstructorArguments.First().Value;
+
+            actionJson.localizable = Type.GetInterfaces().Any(t => t.Name == localizableInterfaceName);
+
+            var summary = commentLookup[Type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Summary;
+            if (!string.IsNullOrWhiteSpace(summary))
+                actionJson.summary = summary;
+
+            var paramsJArray = new JArray();
+            var actionParams = GetParameters();
+            foreach (var parameter in actionParams)
+            {
+                // Extracting parameter properties.
+                var attr = parameter.CustomAttributes.First(a => a.AttributeType.Name == actionParamAttrName);
+                var id = parameter.Name;
+                var alias = attr.ConstructorArguments[0].Value as string;
+                var nameless = alias == string.Empty;
+                var required = !(bool)attr.ConstructorArguments[1].Value;
+
+                // Extracting parameter data type.
+                string GetContentType (Type type)
+                {
+                    switch (type.Name)
+                    {
+                        case "Int32": return "int";
+                        case "Single": return "float";
+                        case "Boolean": return "bool";
+                        case "String": return "string";
+                    }
+                    return null;
+                }
+                dynamic paramDataType = new JObject();
+                var paramType = Nullable.GetUnderlyingType(parameter.PropertyType) ?? parameter.PropertyType;
+                var isLiteral = GetContentType(paramType) != null;
+                if (isLiteral)
+                {
+                    paramDataType.kind = "literal";
+                    paramDataType.contentType = GetContentType(paramType);
+                }
+                else if (paramType.IsArray)
+                {
+                    paramDataType.kind = "array";
+                    var contentType = GetContentType(Nullable.GetUnderlyingType(paramType.GetElementType()) ?? paramType.GetElementType());
+                    if (contentType != null) paramDataType.contentType = contentType;
+                }
+                else
+                {
+                    switch (paramType.Name)
+                    {
+                        case "Pair`2":
+                            paramDataType.kind = "namedLiteral";
+                            paramDataType.contentType = GetContentType(paramType.GetGenericArguments()[1]);
+                            break;
+                        case "LiteralMap`1":
+                            paramDataType.kind = "map";
+                            paramDataType.contentType = GetContentType(paramType.GetGenericArguments()[0]);
+                            break;
+                        case "Vector2":
+                            paramDataType.kind = "vec2";
+                            paramDataType.contentType = "float";
+                            break;
+                        case "Vector3":
+                            paramDataType.kind = "vec3";
+                            paramDataType.contentType = "float";
+                            break;
+                    }
+                }
+
+                // Extracting parameter summary.
+                var doc = default(XmlDocumentComment);
+                var baseType = Type;
+                while (baseType != null && doc is null)
+                {
+                    var key = baseType.FullName != null && baseType.FullName.Contains("[") ? baseType.FullName.GetBefore("[") : baseType.FullName;
+                    doc = commentLookup[key].FirstOrDefault(x => x.MemberName == parameter.Name || x.MemberName.StartsWith(parameter.Name + "`"));
+                    baseType = baseType.BaseType;
+                }
+                var paramSummary = doc?.Summary;
+
+                // Building parameter json.
+                dynamic paramJson = new JObject();
+                paramJson.id = id;
+                if (!string.IsNullOrWhiteSpace(alias))
+                    paramJson.alias = alias;
+                paramJson.nameless = nameless;
+                paramJson.required = required;
+                paramJson.dataType = paramDataType;
+                if (!string.IsNullOrWhiteSpace(paramSummary))
+                    paramJson.summary = paramSummary;
+
+                paramsJArray.Add(paramJson);
+            }
+
+            actionJson["params"] = paramsJArray;
+
+            return actionJson;
+        }
 
         private string GetActionTag ()
         {
