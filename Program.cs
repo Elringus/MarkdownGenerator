@@ -12,11 +12,11 @@ namespace MarkdownWikiGenerator
         {
             //args = new [] { @"C:\Users\Elringus\Documents\UnityProjects\Naninovel\DocsGenerator\Assembly-CSharp.dll", @"C:\Users\Elringus\Documents\WebProjects\NaninovelWeb\docs\api", @"^Naninovel.Actions", "..." };
 
-            var target = args[0];
-            var dest = args[1];
-            var namespaceMatch = args[2];
-            var introText = args[3];
-            var metaPath = args[4];
+            var target = args.ElementAtOrDefault(0);
+            var dest = args.ElementAtOrDefault(1);
+            var namespaceMatch = args.ElementAtOrDefault(2);
+            var introText = args.ElementAtOrDefault(3);
+            var metaPath = args.ElementAtOrDefault(4);
 
             var docBuilder = new StringBuilder();
             docBuilder.Append(introText);
@@ -36,6 +36,7 @@ namespace MarkdownWikiGenerator
             if (!Directory.Exists(dest)) Directory.CreateDirectory(dest);
             File.WriteAllText(Path.Combine(dest, "index.md"), docBuilder.ToString().Replace("*vertical-bar*", "&#124;"), Encoding.UTF8);
 
+            if (string.IsNullOrWhiteSpace(metaPath)) return;
             var rootObject = new JObject();
             rootObject["actions"] = metaJArray;
             if (!Directory.Exists(metaPath)) Directory.CreateDirectory(metaPath);
