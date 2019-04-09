@@ -24,7 +24,7 @@ namespace MarkdownWikiGenerator
             var metaJArray = new JArray();
 
             var types = MarkdownGenerator.Load(target, namespaceMatch)
-                .OrderBy(x => x.HasActionTag ? x.ActionTag : x.Name);
+                .OrderBy(x => x.HasActionAlias ? x.ActionAlias : x.Name);
 
             foreach (var type in types)
             {

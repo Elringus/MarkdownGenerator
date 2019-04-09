@@ -17,12 +17,12 @@ namespace MarkdownWikiGenerator
         public string Name => Type.Name;
         public string BeautifyName => Beautifier.BeautifyType(Type);
         public bool IsAction => Type.FullName.StartsWith("Naninovel.Actions", StringComparison.InvariantCulture);
-        public bool HasActionTag => IsAction && Type.CustomAttributes.Any(a => a.AttributeType.Name == actionTagAttrName);
-        public string ActionTag => GetActionTag();
+        public bool HasActionAlias => IsAction && Type.CustomAttributes.Any(a => a.AttributeType.Name == actionAliasAttrName);
+        public string ActionAlias => GetActionAlias();
 
         private readonly ILookup<string, XmlDocumentComment> commentLookup;
-        private const string actionTagAttrName = "NovelActionTagAttribute";
-        private const string actionParamAttrName = "NovelActionParameterAttribute";
+        private const string actionAliasAttrName = "ActionAliasAttribute";
+        private const string actionParamAttrName = "ActionParameterAttribute";
         private const string localizableInterfaceName = "ILocalizable";
 
         public MarkdownableType (Type type, ILookup<string, XmlDocumentComment> commentLookup)
@@ -39,8 +39,8 @@ namespace MarkdownWikiGenerator
 
             actionJson.id = Type.Name;
 
-            if (Type.CustomAttributes.Any(a => a.AttributeType.Name == actionTagAttrName))
-                actionJson.alias = Type.CustomAttributes.First(a => a.AttributeType.Name == actionTagAttrName).ConstructorArguments.First().Value;
+            if (Type.CustomAttributes.Any(a => a.AttributeType.Name == actionAliasAttrName))
+                actionJson.alias = Type.CustomAttributes.First(a => a.AttributeType.Name == actionAliasAttrName).ConstructorArguments.First().Value;
 
             actionJson.localizable = Type.GetInterfaces().Any(t => t.Name == localizableInterfaceName);
 
@@ -138,11 +138,11 @@ namespace MarkdownWikiGenerator
             return actionJson;
         }
 
-        private string GetActionTag ()
+        private string GetActionAlias ()
         {
-            if (!HasActionTag) return null;
-            var tagAttr = Type.CustomAttributes.First(a => a.AttributeType.Name == actionTagAttrName);
-            return tagAttr.ConstructorArguments.First().Value as string;
+            if (!HasActionAlias) return null;
+            var aliasAttr = Type.CustomAttributes.First(a => a.AttributeType.Name == actionAliasAttrName);
+            return aliasAttr.ConstructorArguments.First().Value as string;
         }
 
         private MethodInfo[] GetMethods ()
@@ -243,7 +243,7 @@ namespace MarkdownWikiGenerator
         {
             var mb = new MarkdownBuilder();
 
-            if (HasActionTag) mb.Header(2, ActionTag);
+            if (HasActionAlias) mb.Header(2, ActionAlias);
             else
             {
                 var typeName = Beautifier.BeautifyType(Type, false);
@@ -271,26 +271,26 @@ namespace MarkdownWikiGenerator
             // Params ----------------------------------------
             mb.Header(4, "Parameters");
             mb.Append("\n<div class=\"config-table\">\n\n");
-            mb.Append("Name | Type | Description\n");
+            mb.Append("ID | Type | Description\n");
             mb.Append("--- | --- | ---\n");
             var parameters = GetParameters();
             foreach (var parameter in parameters)
             {
                 var attr = parameter.CustomAttributes.First(a => a.AttributeType.Name == actionParamAttrName);
-                var paramTag = attr.ConstructorArguments[0].Value as string;
-                var name = paramTag ?? parameter.Name;
-                var isNameless = name == string.Empty;
+                var paramAlias = attr.ConstructorArguments[0].Value as string;
+                var paramId = paramAlias ?? parameter.Name;
+                var isNameless = paramId == string.Empty;
                 var isOptional = (bool)attr.ConstructorArguments[1].Value;
-                if (isNameless) name = parameter.Name;
-                else name = char.ToLowerInvariant(name[0]) + (name.Length > 1 ? name.Substring(1) : string.Empty);
+                if (isNameless) paramId = parameter.Name;
+                else paramId = char.ToLowerInvariant(paramId[0]) + (paramId.Length > 1 ? paramId.Substring(1) : string.Empty);
                 if (isNameless || !isOptional)
                 {
                     var style = (isNameless ? "action-param-nameless " : string.Empty) + (!isOptional ? "action-param-required" : string.Empty);
                     style = style.Trim();
-                    var title = (isNameless ? "Nameless parameter: value should be provided after the action identifer without specifying parameter name " : string.Empty) + 
+                    var title = (isNameless ? "Nameless parameter: value should be provided after the action identifer without specifying parameter ID " : string.Empty) + 
                         (!isOptional ? " Required parameter: parameter should always be specified" : string.Empty);
                     title = title.Trim();
-                    name = $"<span class=\"{style}\" title=\"{title}\">{name}</span>";
+                    paramId = $"<span class=\"{style}\" title=\"{title}\">{paramId}</span>";
                 }
                 
                 var typeName = Beautifier.BeautifyType(parameter.PropertyType);
@@ -304,7 +304,7 @@ namespace MarkdownWikiGenerator
                     baseType = baseType.BaseType;
                 }
                 var descr = doc?.Summary ?? string.Empty;
-                mb.Append($"{name} | {typeName} | {descr}\n");
+                mb.Append($"{paramId} | {typeName} | {descr}\n");
             }
             mb.Append("\n</div>\n\n");
             // -----------------------------------------------
