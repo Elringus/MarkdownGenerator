@@ -269,44 +269,48 @@ namespace MarkdownWikiGenerator
             }
 
             // Params ----------------------------------------
-            mb.Header(4, "Parameters");
-            mb.Append("\n<div class=\"config-table\">\n\n");
-            mb.Append("ID | Type | Description\n");
-            mb.Append("--- | --- | ---\n");
-            var parameters = GetParameters();
-            foreach (var parameter in parameters)
-            {
-                var attr = parameter.CustomAttributes.First(a => a.AttributeType.Name == actionParamAttrName);
-                var paramAlias = attr.ConstructorArguments[0].Value as string;
-                var paramId = paramAlias ?? parameter.Name;
-                var isNameless = paramId == string.Empty;
-                var isOptional = (bool)attr.ConstructorArguments[1].Value;
-                if (isNameless) paramId = parameter.Name;
-                else paramId = char.ToLowerInvariant(paramId[0]) + (paramId.Length > 1 ? paramId.Substring(1) : string.Empty);
-                if (isNameless || !isOptional)
-                {
-                    var style = (isNameless ? "action-param-nameless " : string.Empty) + (!isOptional ? "action-param-required" : string.Empty);
-                    style = style.Trim();
-                    var title = (isNameless ? "Nameless parameter: value should be provided after the action identifer without specifying parameter ID " : string.Empty) + 
-                        (!isOptional ? " Required parameter: parameter should always be specified" : string.Empty);
-                    title = title.Trim();
-                    paramId = $"<span class=\"{style}\" title=\"{title}\">{paramId}</span>";
-                }
-                
-                var typeName = Beautifier.BeautifyType(parameter.PropertyType);
+            var parameters = GetParameters().Where(p => p.Name != "Wait" && p.Name != "Duration" && p.Name != "ConditionalExpression");
 
-                var doc = default(XmlDocumentComment);
-                var baseType = Type;
-                while (baseType != null && doc is null)
+            if (parameters.Count() > 0)
+            {
+                mb.Header(4, "Parameters");
+                mb.Append("\n<div class=\"config-table\">\n\n");
+                mb.Append("ID | Type | Description\n");
+                mb.Append("--- | --- | ---\n");
+                foreach (var parameter in parameters)
                 {
-                    var key = baseType.FullName != null && baseType.FullName.Contains("[") ? baseType.FullName.GetBefore("[") : baseType.FullName;
-                    doc = commentLookup[key].FirstOrDefault(x => x.MemberName == parameter.Name || x.MemberName.StartsWith(parameter.Name + "`"));
-                    baseType = baseType.BaseType;
+                    var attr = parameter.CustomAttributes.First(a => a.AttributeType.Name == actionParamAttrName);
+                    var paramAlias = attr.ConstructorArguments[0].Value as string;
+                    var paramId = paramAlias ?? parameter.Name;
+                    var isNameless = paramId == string.Empty;
+                    var isOptional = (bool)attr.ConstructorArguments[1].Value;
+                    if (isNameless) paramId = parameter.Name;
+                    else paramId = char.ToLowerInvariant(paramId[0]) + (paramId.Length > 1 ? paramId.Substring(1) : string.Empty);
+                    if (isNameless || !isOptional)
+                    {
+                        var style = (isNameless ? "action-param-nameless " : string.Empty) + (!isOptional ? "action-param-required" : string.Empty);
+                        style = style.Trim();
+                        var title = (isNameless ? "Nameless parameter: value should be provided after the action identifer without specifying parameter ID " : string.Empty) +
+                            (!isOptional ? " Required parameter: parameter should always be specified" : string.Empty);
+                        title = title.Trim();
+                        paramId = $"<span class=\"{style}\" title=\"{title}\">{paramId}</span>";
+                    }
+
+                    var typeName = Beautifier.BeautifyType(parameter.PropertyType);
+
+                    var doc = default(XmlDocumentComment);
+                    var baseType = Type;
+                    while (baseType != null && doc is null)
+                    {
+                        var key = baseType.FullName != null && baseType.FullName.Contains("[") ? baseType.FullName.GetBefore("[") : baseType.FullName;
+                        doc = commentLookup[key].FirstOrDefault(x => x.MemberName == parameter.Name || x.MemberName.StartsWith(parameter.Name + "`"));
+                        baseType = baseType.BaseType;
+                    }
+                    var descr = doc?.Summary ?? string.Empty;
+                    mb.Append($"{paramId} | {typeName} | {descr}\n");
                 }
-                var descr = doc?.Summary ?? string.Empty;
-                mb.Append($"{paramId} | {typeName} | {descr}\n");
+                mb.Append("\n</div>\n\n");
             }
-            mb.Append("\n</div>\n\n");
             // -----------------------------------------------
 
             var example = commentLookup[Type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Example;
