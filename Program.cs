@@ -13,7 +13,7 @@ namespace MarkdownWikiGenerator
         {
             try
             {
-                //args = new [] { @"C:\Users\Elringus\Documents\UnityProjects\Naninovel\DocsGenerator\Assembly-CSharp.dll", @"C:\Users\Elringus\Documents\WebProjects\NaninovelWeb\docs\api", @"^Naninovel.Actions", "..." };
+                //args = new [] { @"C:\Users\Elringus\Documents\UnityProjects\Naninovel\DocsGenerator\Assembly-CSharp.dll", @"C:\Users\Elringus\Documents\WebProjects\NaninovelWeb\docs\api", @"^Naninovel.Commands", "..." };
 
                 var target = args.ElementAtOrDefault(0);
                 var dest = args.ElementAtOrDefault(1);
@@ -27,11 +27,11 @@ namespace MarkdownWikiGenerator
                 var metaJArray = new JArray();
 
                 var types = MarkdownGenerator.Load(target, namespaceMatch)
-                    .OrderBy(x => x.HasActionAlias ? x.ActionAlias : x.Name);
+                    .OrderBy(x => x.HasCommandAlias ? x.CommandAlias : x.Name).ToList();
 
                 foreach (var type in types)
                 {
-                    if (!type.IsAction || type.Type.IsAbstract) continue;
+                    if (!type.IsCommand || type.Type.IsAbstract) continue;
                     docBuilder.Append(type.ToString());
                     metaJArray.Add(type.ToJson());
                 }
@@ -41,7 +41,7 @@ namespace MarkdownWikiGenerator
 
                 if (string.IsNullOrWhiteSpace(metaPath)) return;
                 var rootObject = new JObject();
-                rootObject["actions"] = metaJArray;
+                rootObject["commands"] = metaJArray;
                 if (!Directory.Exists(metaPath)) Directory.CreateDirectory(metaPath);
                 File.WriteAllText(Path.Combine(metaPath, "metadata.json"), rootObject.ToString(), Encoding.UTF8);
             }
