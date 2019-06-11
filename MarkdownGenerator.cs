@@ -81,29 +81,26 @@ namespace MarkdownWikiGenerator
                 }
                 else if (paramType.IsArray)
                 {
-                    paramDataType.kind = "array";
-                    var contentType = GetContentType(Nullable.GetUnderlyingType(paramType.GetElementType()) ?? paramType.GetElementType());
-                    if (contentType != null) paramDataType.contentType = contentType;
+                    var elementType = Nullable.GetUnderlyingType(paramType.GetElementType()) ?? paramType.GetElementType();
+                    if (elementType.Name == "Named`1") // Treating arrays of named liters as maps for the parser.
+                    {
+                        paramDataType.kind = "map";
+                        paramDataType.contentType = GetContentType(elementType.GetGenericArguments()[0]);
+                    }
+                    else
+                    {
+                        paramDataType.kind = "array";
+                        var contentType = GetContentType(elementType);
+                        if (contentType != null) paramDataType.contentType = contentType;
+                    }
                 }
                 else
                 {
                     switch (paramType.Name)
                     {
-                        case "Pair`2":
+                        case "Named`1":
                             paramDataType.kind = "namedLiteral";
-                            paramDataType.contentType = GetContentType(paramType.GetGenericArguments()[1]);
-                            break;
-                        case "LiteralMap`1":
-                            paramDataType.kind = "map";
                             paramDataType.contentType = GetContentType(paramType.GetGenericArguments()[0]);
-                            break;
-                        case "Vector2":
-                            paramDataType.kind = "vec2";
-                            paramDataType.contentType = "float";
-                            break;
-                        case "Vector3":
-                            paramDataType.kind = "vec3";
-                            paramDataType.contentType = "float";
                             break;
                     }
                 }
