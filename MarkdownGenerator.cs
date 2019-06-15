@@ -46,7 +46,19 @@ namespace MarkdownWikiGenerator
 
             var summary = commentLookup[Type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Summary;
             if (!string.IsNullOrWhiteSpace(summary))
+            {
+                // Replace local with full URLs.
+                summary = summary.Replace("](/", "](https://naninovel.com/").Replace(".md", ".html");
                 commandJson.summary = summary;
+            }
+
+            var remarks = commentLookup[Type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Remarks;
+            if (!string.IsNullOrWhiteSpace(remarks))
+            {
+                // Replace local with full URLs.
+                remarks = remarks.Replace("](/", "](https://naninovel.com/").Replace(".md", ".html");
+                commandJson.remarks = remarks;
+            }
 
             var paramsJArray = new JArray();
             var commandParams = GetParameters();
@@ -125,7 +137,11 @@ namespace MarkdownWikiGenerator
                 paramJson.required = required;
                 paramJson.dataType = paramDataType;
                 if (!string.IsNullOrWhiteSpace(paramSummary))
+                {
+                    // Replace local with full URLs.
+                    paramSummary = paramSummary.Replace("](/", "](https://naninovel.com/").Replace(".md", ".html");
                     paramJson.summary = paramSummary;
+                }
 
                 paramsJArray.Add(paramJson);
             }
