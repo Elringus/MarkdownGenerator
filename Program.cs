@@ -13,7 +13,7 @@ namespace MarkdownWikiGenerator
         {
             try
             {
-                //args = new [] { @"C:\Users\Elringus\Documents\UnityProjects\Naninovel\DocsGenerator\Assembly-CSharp.dll", @"C:\Users\Elringus\Documents\WebProjects\NaninovelWeb\docs\api", @"^Naninovel.Commands", "..." };
+                //args = new[] { @"C:\Users\Elringus\Documents\UnityProjects\Naninovel\DocsGenerator\Elringus.Naninovel.Runtime.dll", @"C:\Users\Elringus\Documents\GitHub\NaninovelWeb\docs\api", @"^Naninovel.Commands", "..." };
 
                 var target = args.ElementAtOrDefault(0);
                 var dest = args.ElementAtOrDefault(1);

@@ -16,13 +16,28 @@ namespace MarkdownWikiGenerator
         public string Namespace => Type.Namespace;
         public string Name => Type.Name;
         public string BeautifyName => Beautifier.BeautifyType(Type);
-        public bool IsCommand => Type.FullName.StartsWith("Naninovel.Commands", StringComparison.InvariantCulture);
+        public bool IsCommand
+        {
+            get
+            {
+                    var curType = Type.BaseType;
+                    while (curType != null)
+                    {
+                        if (curType.FullName == commandTypeFullName) return true;
+                        curType = curType.BaseType;
+                    }
+                    return false;
+            }
+        }
         public bool HasCommandAlias => IsCommand && Type.CustomAttributes.Any(a => a.AttributeType.Name == commandAliasAttrName);
         public string CommandAlias => GetCommandAlias();
 
         private readonly ILookup<string, XmlDocumentComment> commentLookup;
+        private const string commandTypeFullName = "Naninovel.Commands.Command";
         private const string commandAliasAttrName = "CommandAliasAttribute";
-        private const string commandParamAttrName = "CommandParameterAttribute";
+        private const string paramInterfaceName = "ICommandParameter";
+        private const string paramAliasAttrName = "ParameterAliasAttribute";
+        private const string requiredParamAttrName = "RequiredParameterAttribute";
         private const string localizableInterfaceName = "ILocalizable";
 
         public MarkdownableType (Type type, ILookup<string, XmlDocumentComment> commentLookup)
@@ -65,56 +80,50 @@ namespace MarkdownWikiGenerator
             foreach (var parameter in commandParams)
             {
                 // Extracting parameter properties.
-                var attr = parameter.CustomAttributes.First(a => a.AttributeType.Name == commandParamAttrName);
                 var id = parameter.Name;
-                var alias = attr.ConstructorArguments[0].Value as string;
+                var alias = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == commandAliasAttrName)?.ConstructorArguments[0].Value as string;
                 var nameless = alias == string.Empty;
-                var required = !(bool)attr.ConstructorArguments[1].Value;
+                var required = parameter.CustomAttributes.Any(a => a.AttributeType.Name == requiredParamAttrName);
 
-                // Extracting parameter data type.
-                string GetContentType (Type type)
+                // Extracting parameter value type.
+                string ResolveValueType (Type type)
                 {
-                    switch (type.Name)
+                    var valueTypeName = type.GetInterface("INullable`1")?.GetGenericArguments()[0]?.Name;
+                    switch (valueTypeName)
                     {
-                        case "Int32": return "int";
-                        case "Single": return "float";
-                        case "Boolean": return "bool";
-                        case "String": return "string";
+                        case "String": case "NullableString": return "string";
+                        case "Int32": case "NullableInteger": return "int";
+                        case "Single": case "NullableFloat": return "float";
+                        case "Boolean": case "NullableBoolean": return "bool";
                     }
                     return null;
                 }
                 dynamic paramDataType = new JObject();
-                var paramType = Nullable.GetUnderlyingType(parameter.PropertyType) ?? parameter.PropertyType;
-                var isLiteral = GetContentType(paramType) != null;
+                var paramType = parameter.FieldType;
+                var isLiteral = ResolveValueType(paramType) != null;
                 if (isLiteral)
                 {
                     paramDataType.kind = "literal";
-                    paramDataType.contentType = GetContentType(paramType);
+                    paramDataType.contentType = ResolveValueType(paramType);
                 }
-                else if (paramType.IsArray)
+                else if (paramType.GetInterface("IEnumerable") != null)
                 {
-                    var elementType = Nullable.GetUnderlyingType(paramType.GetElementType()) ?? paramType.GetElementType();
-                    if (elementType.Name == "Named`1") // Treating arrays of named liters as maps for the parser.
+                    var elementType = paramType.GetInterface("INullable`1").GetGenericArguments()[0].GetGenericArguments()[0];
+                    if (elementType.GetInterface("INamedValue") != null) // Treating arrays of named liters as maps for the parser.
                     {
                         paramDataType.kind = "map";
-                        paramDataType.contentType = GetContentType(elementType.GetGenericArguments()[0]);
+                        paramDataType.contentType = ResolveValueType(elementType.GetInterface("INamed`1").GetGenericArguments()[0]);
                     }
                     else
                     {
                         paramDataType.kind = "array";
-                        var contentType = GetContentType(elementType);
-                        if (contentType != null) paramDataType.contentType = contentType;
+                        paramDataType.contentType = ResolveValueType(elementType);
                     }
                 }
                 else
                 {
-                    switch (paramType.Name)
-                    {
-                        case "Named`1":
-                            paramDataType.kind = "namedLiteral";
-                            paramDataType.contentType = GetContentType(paramType.GetGenericArguments()[0]);
-                            break;
-                    }
+                    paramDataType.kind = "namedLiteral";
+                    paramDataType.contentType = ResolveValueType(paramType.GetInterface("INullable`1").GetGenericArguments()[0].GetInterface("INamed`1").GetGenericArguments()[0]);
                 }
 
                 // Extracting parameter summary.
@@ -185,11 +194,11 @@ namespace MarkdownWikiGenerator
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any() && !x.IsPrivate).ToArray();
         }
 
-        private PropertyInfo[] GetParameters ()
+        private FieldInfo[] GetParameters ()
         {
-            return Type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty | BindingFlags.SetProperty)
+            return Type.GetFields(BindingFlags.Public | BindingFlags.Instance)
                 .Where(x => !x.IsSpecialName && !x.GetCustomAttributes<ObsoleteAttribute>().Any())
-                .Where(f => f.CustomAttributes.Any(a => a.AttributeType.Name == commandParamAttrName)).ToArray();
+                .Where(f => f.FieldType.GetInterface(paramInterfaceName) != null).ToArray();
         }
 
         private EventInfo[] GetEvents ()
@@ -282,7 +291,7 @@ namespace MarkdownWikiGenerator
             }
 
             // Params ----------------------------------------
-            var parameters = GetParameters().Where(p => p.Name != "Wait" && p.Name != "Duration" && p.Name != "ConditionalExpression");
+            var parameters = GetParameters().Where(f => f.Name != "Wait" && f.Name != "Duration" && f.Name != "ConditionalExpression");
 
             if (parameters.Count() > 0)
             {
@@ -292,11 +301,10 @@ namespace MarkdownWikiGenerator
                 mb.Append("--- | --- | ---\n");
                 foreach (var parameter in parameters)
                 {
-                    var attr = parameter.CustomAttributes.First(a => a.AttributeType.Name == commandParamAttrName);
-                    var paramAlias = attr.ConstructorArguments[0].Value as string;
+                    var paramAlias = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == paramAliasAttrName)?.ConstructorArguments[0].Value as string;
                     var paramId = paramAlias ?? parameter.Name;
                     var isNameless = paramId == string.Empty;
-                    var isOptional = (bool)attr.ConstructorArguments[1].Value;
+                    var isOptional = !parameter.CustomAttributes.Any(a => a.AttributeType.Name == requiredParamAttrName);
                     if (isNameless) paramId = parameter.Name;
                     else paramId = char.ToLowerInvariant(paramId[0]) + (paramId.Length > 1 ? paramId.Substring(1) : string.Empty);
                     if (isNameless || !isOptional)
@@ -309,7 +317,7 @@ namespace MarkdownWikiGenerator
                         paramId = $"<span class=\"{style}\" title=\"{title}\">{paramId}</span>";
                     }
 
-                    var typeName = Beautifier.BeautifyType(parameter.PropertyType);
+                    var typeName = Beautifier.BeautifyType(parameter.FieldType);
 
                     var doc = default(XmlDocumentComment);
                     var baseType = Type;
