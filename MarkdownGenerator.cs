@@ -81,7 +81,7 @@ namespace MarkdownWikiGenerator
             {
                 // Extracting parameter properties.
                 var id = parameter.Name;
-                var alias = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == commandAliasAttrName)?.ConstructorArguments[0].Value as string;
+                var alias = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == paramAliasAttrName)?.ConstructorArguments[0].Value as string;
                 var nameless = alias == string.Empty;
                 var required = parameter.CustomAttributes.Any(a => a.AttributeType.Name == requiredParamAttrName);
 
