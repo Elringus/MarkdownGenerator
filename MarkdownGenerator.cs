@@ -291,7 +291,7 @@ namespace MarkdownWikiGenerator
             }
 
             // Params ----------------------------------------
-            var parameters = GetParameters().Where(f => f.Name != "Wait" && f.Name != "Duration" && f.Name != "ConditionalExpression");
+            var parameters = GetParameters().Where(f => f.Name != "Wait" && f.Name != "ConditionalExpression");
 
             if (parameters.Count() > 0)
             {
