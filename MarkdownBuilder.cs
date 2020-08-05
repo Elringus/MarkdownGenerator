@@ -78,7 +78,7 @@ namespace MarkdownWikiGenerator
 
         public void Code (string language, string code)
         {
-            sb.Append("```");
+            sb.Append("```nani");
             sb.AppendLine(language);
             sb.AppendLine(code);
             sb.AppendLine("```");
@@ -86,7 +86,7 @@ namespace MarkdownWikiGenerator
 
         public void Code (string code)
         {
-            sb.AppendLine("```");
+            sb.AppendLine("```nani");
             sb.AppendLine(code);
             sb.AppendLine("```");
         }
