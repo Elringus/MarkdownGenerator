@@ -109,10 +109,11 @@ namespace MarkdownWikiGenerator
                 else if (paramType.GetInterface("IEnumerable") != null)
                 {
                     var elementType = paramType.GetInterface("INullable`1").GetGenericArguments()[0].GetGenericArguments()[0];
-                    if (elementType.GetInterface("INamedValue") != null) // Treating arrays of named liters as maps for the parser.
+                    var namedElementType = elementType.BaseType?.GetGenericArguments()[0];
+                    if (namedElementType?.GetInterface("INamedValue") != null) // Treating arrays of named liters as maps for the parser.
                     {
                         paramDataType.kind = "map";
-                        paramDataType.contentType = ResolveValueType(elementType.GetInterface("INamed`1").GetGenericArguments()[0]);
+                        paramDataType.contentType = ResolveValueType(namedElementType.GetInterface("INamed`1").GetGenericArguments()[0]);
                     }
                     else
                     {

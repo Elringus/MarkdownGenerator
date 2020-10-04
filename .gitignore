@@ -1,6 +1,7 @@
 # Unity
 
 .vs
+.idea/
 
 *.pidb
 *.suo
