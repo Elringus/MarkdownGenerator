@@ -61,19 +61,15 @@ namespace MarkdownWikiGenerator
 
             var summary = commentLookup[Type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Summary;
             if (!string.IsNullOrWhiteSpace(summary))
-            {
-                // Replace local with full URLs.
-                summary = summary.Replace("](/", "](https://naninovel.com/").Replace(".md", ".html");
-                commandJson.summary = summary;
-            }
+                commandJson.summary = ReplaceLocalUrls(summary);
 
             var remarks = commentLookup[Type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Remarks;
             if (!string.IsNullOrWhiteSpace(remarks))
-            {
-                // Replace local with full URLs.
-                remarks = remarks.Replace("](/", "](https://naninovel.com/").Replace(".md", ".html");
-                commandJson.remarks = remarks;
-            }
+                commandJson.remarks = ReplaceLocalUrls(remarks);
+            
+            var examples = commentLookup[Type.FullName].FirstOrDefault(x => x.MemberType == MemberType.Type)?.Example;
+            if (!string.IsNullOrWhiteSpace(examples))
+                commandJson.examples = examples;
 
             var paramsJArray = new JArray();
             var commandParams = GetParameters();
@@ -147,11 +143,7 @@ namespace MarkdownWikiGenerator
                 paramJson.required = required;
                 paramJson.dataType = paramDataType;
                 if (!string.IsNullOrWhiteSpace(paramSummary))
-                {
-                    // Replace local with full URLs.
-                    paramSummary = paramSummary.Replace("](/", "](https://naninovel.com/").Replace(".md", ".html");
-                    paramJson.summary = paramSummary;
-                }
+                    paramJson.summary = ReplaceLocalUrls(paramSummary);
 
                 paramsJArray.Add(paramJson);
             }
@@ -159,6 +151,14 @@ namespace MarkdownWikiGenerator
             commandJson["params"] = paramsJArray;
 
             return commandJson;
+        }
+
+        private string ReplaceLocalUrls (string content)
+        {
+            content = Regex.Replace(content, @"\[@(\w+?)]", "[@$1](https://naninovel.com/api/#$1)");
+            if (content.Contains("/api/#"))
+                content = content.Replace(content.GetAfterFirst("/api/#"), content.GetAfterFirst("/api/#").ToLowerInvariant());
+            return content.Replace("](/", "](https://naninovel.com/").Replace(".md", ".html");
         }
 
         private string GetCommandAlias ()
