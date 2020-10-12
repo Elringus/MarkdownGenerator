@@ -38,6 +38,7 @@ namespace MarkdownWikiGenerator
         private const string paramInterfaceName = "ICommandParameter";
         private const string paramAliasAttrName = "ParameterAliasAttribute";
         private const string requiredParamAttrName = "RequiredParameterAttribute";
+        private const string resourcePathPrefixAttrName = "ResourcePathPrefixAttribute";
         private const string localizableInterfaceName = "ILocalizable";
 
         public MarkdownableType (Type type, ILookup<string, XmlDocumentComment> commentLookup)
@@ -80,6 +81,7 @@ namespace MarkdownWikiGenerator
                 var alias = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == paramAliasAttrName)?.ConstructorArguments[0].Value as string;
                 var nameless = alias == string.Empty;
                 var required = parameter.CustomAttributes.Any(a => a.AttributeType.Name == requiredParamAttrName);
+                var resourcePathPrefix = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == resourcePathPrefixAttrName)?.ConstructorArguments[0].Value as string;
 
                 // Extracting parameter value type.
                 string ResolveValueType (Type type)
@@ -144,6 +146,8 @@ namespace MarkdownWikiGenerator
                 paramJson.dataType = paramDataType;
                 if (!string.IsNullOrWhiteSpace(paramSummary))
                     paramJson.summary = ReplaceLocalUrls(paramSummary);
+                if (!string.IsNullOrWhiteSpace(resourcePathPrefix))
+                    paramJson.resourcePathPrefix = resourcePathPrefix;
 
                 paramsJArray.Add(paramJson);
             }
