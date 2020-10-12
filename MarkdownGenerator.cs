@@ -38,7 +38,9 @@ namespace MarkdownWikiGenerator
         private const string paramInterfaceName = "ICommandParameter";
         private const string paramAliasAttrName = "ParameterAliasAttribute";
         private const string requiredParamAttrName = "RequiredParameterAttribute";
-        private const string resourcePathPrefixAttrName = "ResourcePathPrefixAttribute";
+        private const string ideResourceAttrName = "IDEResourceAttribute";
+        private const string ideActorAttrName = "IDEActorAttribute";
+        private const string ideAppearanceAttrName = "IDEAppearanceAttribute";
         private const string localizableInterfaceName = "ILocalizable";
 
         public MarkdownableType (Type type, ILookup<string, XmlDocumentComment> commentLookup)
@@ -81,8 +83,18 @@ namespace MarkdownWikiGenerator
                 var alias = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == paramAliasAttrName)?.ConstructorArguments[0].Value as string;
                 var nameless = alias == string.Empty;
                 var required = parameter.CustomAttributes.Any(a => a.AttributeType.Name == requiredParamAttrName);
-                var resourcePathPrefix = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == resourcePathPrefixAttrName)?.ConstructorArguments[0].Value as string;
+                var resourcePathPrefix = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == ideResourceAttrName)?.ConstructorArguments[0].Value as string;
+                var resourcePathPrefixNamedId = resourcePathPrefix != null ? (int)parameter.CustomAttributes.First(a => a.AttributeType.Name == ideResourceAttrName).ConstructorArguments[1].Value : -1;
+                var actorPathPrefix = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == ideActorAttrName)?.ConstructorArguments[0].Value as string;
+                var actorPathPrefixNamedId = actorPathPrefix != null ? (int)parameter.CustomAttributes.First(a => a.AttributeType.Name == ideActorAttrName).ConstructorArguments[1].Value : -1;
+                var appearance = parameter.CustomAttributes.Any(a => a.AttributeType.Name == ideAppearanceAttrName);
+                var appearanceNamedId = appearance ? (int)parameter.CustomAttributes.First(a => a.AttributeType.Name == ideAppearanceAttrName).ConstructorArguments[0].Value : -1;
 
+                if (id == "Id" && commandJson.id == "ModifyBackground")
+                    actorPathPrefix = "Backgrounds";
+                if (id == "Id" && commandJson.id == "ModifyCharacter")
+                    actorPathPrefix = "Characters";
+                
                 // Extracting parameter value type.
                 string ResolveValueType (Type type)
                 {
@@ -147,7 +159,17 @@ namespace MarkdownWikiGenerator
                 if (!string.IsNullOrWhiteSpace(paramSummary))
                     paramJson.summary = ReplaceLocalUrls(paramSummary);
                 if (!string.IsNullOrWhiteSpace(resourcePathPrefix))
+                {
                     paramJson.resourcePathPrefix = resourcePathPrefix;
+                    paramJson.resourcePathPrefixNamedId = resourcePathPrefixNamedId;
+                }
+                if (!string.IsNullOrWhiteSpace(actorPathPrefix))
+                {
+                    paramJson.actorPathPrefix = actorPathPrefix;
+                    paramJson.actorPathPrefixNamedId = actorPathPrefixNamedId;
+                }
+                paramJson.appearance = appearance;
+                paramJson.appearanceNamedId = appearanceNamedId;
 
                 paramsJArray.Add(paramJson);
             }
