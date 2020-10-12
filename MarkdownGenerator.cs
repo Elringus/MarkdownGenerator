@@ -41,6 +41,7 @@ namespace MarkdownWikiGenerator
         private const string ideResourceAttrName = "IDEResourceAttribute";
         private const string ideActorAttrName = "IDEActorAttribute";
         private const string ideAppearanceAttrName = "IDEAppearanceAttribute";
+        private const string ideConstantAttrName = "IDEConstantAttribute";
         private const string localizableInterfaceName = "ILocalizable";
 
         public MarkdownableType (Type type, ILookup<string, XmlDocumentComment> commentLookup)
@@ -89,6 +90,8 @@ namespace MarkdownWikiGenerator
                 var actorPathPrefixNamedId = actorPathPrefix != null ? (int)parameter.CustomAttributes.First(a => a.AttributeType.Name == ideActorAttrName).ConstructorArguments[1].Value : -1;
                 var appearance = parameter.CustomAttributes.Any(a => a.AttributeType.Name == ideAppearanceAttrName);
                 var appearanceNamedId = appearance ? (int)parameter.CustomAttributes.First(a => a.AttributeType.Name == ideAppearanceAttrName).ConstructorArguments[0].Value : -1;
+                var constant = parameter.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == ideConstantAttrName)?.ConstructorArguments[0].Value as string;
+                var constantNamedId = constant != null ? (int)parameter.CustomAttributes.First(a => a.AttributeType.Name == ideConstantAttrName).ConstructorArguments[1].Value : -1;
 
                 if (id == "Id" && commandJson.id == "ModifyBackground")
                     actorPathPrefix = "Backgrounds";
@@ -170,6 +173,11 @@ namespace MarkdownWikiGenerator
                 }
                 paramJson.appearance = appearance;
                 paramJson.appearanceNamedId = appearanceNamedId;
+                if (!string.IsNullOrWhiteSpace(constant))
+                {
+                    paramJson.constant = constant;
+                    paramJson.constantNamedId = constantNamedId;
+                }
 
                 paramsJArray.Add(paramJson);
             }
